@@ -15,6 +15,8 @@ module.exports = function (grunt) {
   // Time how long tasks take. Can help when optimizing build times
   require('time-grunt')(grunt);
 
+  var url = require('url');
+
   grunt.loadNpmTasks('grunt-connect-proxy');
 
   // Define the configuration for all the tasks
@@ -65,33 +67,23 @@ module.exports = function (grunt) {
 
     // The actual grunt server settings
     connect: {
+      options: {
+        port: grunt.option('p') || 9000,
+        // Change this to '0.0.0.0' to access the server from outside.
+        hostname: 'localhost',
+        livereload: false
+      },
       server: {
-        options: {
-          port: 9000,
-          // Change this to '0.0.0.0' to access the server from outside.
-          hostname: 'localhost',
-          livereload: 35729
-        },
-        proxies: [
-          {
-            context: '/api',
-            host: 'localhost',
-            port: '3000',
-            https: false,
-            changeOrigin: false,
-            xforward: false
-          }
-        ]
+        proxies: borgRedirections()
       },
       livereload: {
         options: {
-          open: true,
+          open: false,
           base: [
             '.tmp',
             '<%= yeoman.app %>'
           ],
           middleware: function (connect, options) {
-            console.log('middleware');
             if (!Array.isArray(options.base)) {
               options.base = [options.base];
             }
@@ -427,4 +419,24 @@ module.exports = function (grunt) {
     'test',
     'build'
   ]);
+
+  function borgRedirections() {
+    var redirectionString = grunt.option('redirect') || '{}';
+    var redirections = JSON.parse(redirectionString);
+    var result = [];
+
+    for (var context in redirections) {
+      var target = url.parse(redirections[context]);
+      result.push({
+        context: context,
+        host: target.hostname,
+        port: target.port,
+        https: false,
+        changeOrigin: false,
+        xforward: false
+      });
+    }
+
+    return result;
+  }
 };
